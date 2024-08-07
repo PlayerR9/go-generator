@@ -3,6 +3,9 @@ package generator
 import (
 	"errors"
 	"fmt"
+	"io"
+	"log"
+	"os"
 	"slices"
 	"strings"
 	"unicode"
@@ -375,4 +378,30 @@ func GetStringFnCall(var_name string, type_name string, custom map[string][]stri
 	}
 
 	return builder.String(), dependencies
+}
+
+// InitLogger initializes the logger.
+//
+// Parameters:
+//   - out: The output writer. Defaults to os.Stdout.
+//   - name: The name of the logger. Defaults to "go-generator".
+//
+// Returns:
+//   - *log.Logger: The initialized logger. Never returns nil.
+func InitLogger(out io.Writer, name string) *log.Logger {
+	if out == nil {
+		out = os.Stdout
+	}
+
+	if name == "" {
+		name = "go-generator"
+	}
+
+	var builder strings.Builder
+
+	builder.WriteString("[")
+	builder.WriteString(name)
+	builder.WriteString("]: ")
+
+	return log.New(out, builder.String(), log.Lshortfile)
 }
