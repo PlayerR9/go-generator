@@ -5,7 +5,7 @@ import (
 )
 
 func TestIsValidName(t *testing.T) {
-	err := is_valid_name("tn", []string{"child"}, not_exported)
+	err := IsValidVariableName("tn", []string{"child"}, NotExported)
 	if err != nil {
 		t.Errorf("IsValidName failed: %s", err.Error())
 	}

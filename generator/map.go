@@ -62,7 +62,7 @@ func (i *om_iterator[K, V]) Restart() {
 	i.pos = 0
 }
 
-// new_om_iterator creates a new OMIterator.
+/* // new_om_iterator creates a new OMIterator.
 //
 // Parameters:
 //   - m: The map to iterate over.
@@ -78,7 +78,7 @@ func new_om_iterator[K cmp.Ordered, V any](m *ordered_map[K, V]) *om_iterator[K,
 		m:   m,
 		pos: 0,
 	}
-}
+} */
 
 // ordered_map is a map that is ordered by the keys.
 type ordered_map[K cmp.Ordered, V any] struct {

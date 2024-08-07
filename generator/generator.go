@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"go/build"
 	"path/filepath"
-	"strings"
 	"text/template"
+
+	gcers "github.com/PlayerR9/go-commons/errors"
 )
 
 // PackageNameSetter is the interface that all generators must implement.
@@ -92,68 +94,37 @@ func (cg *CodeGenerator[T]) AddDoFunc(do_func DoFunc[T]) {
 	cg.do_funcs = append(cg.do_funcs, do_func)
 }
 
-// fix_output_loc fixes the output location.
+// fix_import_dir takes a destination string and manipulates it to get the correct import path.
 //
 // Parameters:
-//   - file_name: The name of the file.
-//   - suffix: The suffix of the file.
+//   - dest: The destination path.
 //
 // Returns:
-//   - string: The output location.
-//   - error: An error if any.
-//
-// Errors:
-//   - *common.ErrInvalidParameter: If the file name is empty.
-//   - *common.ErrInvalidUsage: If the OutputLoc flag was not set.
-//   - error: Any other error that may have occurred.
-//
-// The suffix parameter must end with the ".go" extension. Plus, the output
-// location is always lowercased.
-//
-// NOTES: This function only sets the output location if the user did not set
-// the output flag. If they did, this function won't do anything but the necessary
-// checks and validations.
-//
-// Example:
-//
-//	loc, err := fix_output_loc("test", ".go")
-//	if err != nil {
-//	  panic(err)
-//	}
-//
-//	fmt.Println(loc) // test.go
-func fix_output_loc(default_file_name string) (string, error) {
-	// Assumption: output_loc_flag is always set.
-	output_loc := *output_loc_flag
+//   - string: The correct import path.
+//   - error: An error if there is any.
+func fix_import_dir(dest string) (string, error) {
+	if dest == "" {
+		dest = "."
+	}
 
-	if output_loc == "" {
-		if is_output_loc_required_flag {
-			return "", errors.New("flag must be set")
+	dir := filepath.Dir(dest)
+	if dir == "." {
+		pkg, err := build.ImportDir(".", 0)
+		if err != nil {
+			return "", err
 		}
 
-		output_loc = default_file_name
+		return pkg.Name, nil
 	}
 
-	// Assumption: default_file_name is never empty.
-
-	before, after := filepath.Split(output_loc)
-
-	after = strings.ToLower(after)
-
-	ext := filepath.Ext(after)
-	if ext == "" {
-		return "", errors.New("location cannot be a directory")
-	} else if ext != go_ext {
-		return "", errors.New("location must be a .go file")
-	}
-
-	return before + after, nil
+	_, right := filepath.Split(dir)
+	return right, nil
 }
 
 // Generate generates code using the given generator and writes it to the given destination file.
 //
 // WARNING:
-//   - Remember to call this function iff the function go_generator.SetOutputFlag() was called
+//   - Remember to call this function iff the function go-generator.SetOutputFlag() was called
 //     and only after the function flag.Parse() was called.
 //
 // Parameters:
@@ -168,20 +139,20 @@ func fix_output_loc(default_file_name string) (string, error) {
 // Errors:
 //   - *common.ErrInvalidParameter: If the file_name or suffix is an empty string.
 //   - error: Any other type of error that may have occurred.
-func (cg CodeGenerator[T]) Generate(default_file_name string, data T) (*Generated, error) {
+func (cg CodeGenerator[T]) Generate(o *OutputLocVal, default_file_name string, data T) (*Generated, error) {
+	if o == nil {
+		return nil, gcers.NewErrInvalidUsage(
+			errors.New("output location was not defined"),
+			"Please call the go-generator.NewOutputFlag() function before calling this function.",
+		)
+	}
+
 	if cg.templ == nil {
 		panic("cg.templ is nil")
 	}
 
-	if output_loc_flag == nil {
-		return nil, NewErrInvalidUsage(
-			errors.New("output location was not defined"),
-			"Please call the go-generator.SetOutputFlag() function before calling this function.",
-		)
-	}
-
 	if default_file_name == "" {
-		return nil, NewErrInvalidParameter("file_name", NewErrEmpty(default_file_name))
+		return nil, gcers.NewErrInvalidParameter("file_name", gcers.NewErrEmpty(default_file_name))
 	}
 
 	// dbg.AssertNil(cg.templ, "cg.templ")
@@ -192,7 +163,7 @@ func (cg CodeGenerator[T]) Generate(default_file_name string, data T) (*Generate
 
 	g := &Generated{}
 
-	output_loc, err := fix_output_loc(default_file_name)
+	output_loc, err := o.fix(default_file_name)
 	if err != nil {
 		return g, fmt.Errorf("failed to fix output location: %w", err)
 	}

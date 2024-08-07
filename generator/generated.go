@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	fm "github.com/PlayerR9/go-generator/internal/file_manager"
+	gcfm "github.com/PlayerR9/go-commons/file_manager"
 )
 
 // go_ext is the extension of Go files.
@@ -34,7 +34,7 @@ func (g Generated) WriteFile(suffix string) (string, error) {
 	var loc string
 
 	if suffix != "" {
-		loc = fm.AddSuffixToFileName(g.DestLoc, suffix, go_ext)
+		loc = gcfm.AddSuffixToFileName(g.DestLoc, suffix, go_ext)
 	} else {
 		loc = g.DestLoc
 	}

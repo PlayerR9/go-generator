@@ -4,41 +4,54 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
+	"unicode"
+	"unicode/utf8"
+
+	gcers "github.com/PlayerR9/go-commons/errors"
+	gcint "github.com/PlayerR9/go-commons/ints"
 )
 
-/////////////////////////////////////////////////////
+// OutputLocVal is the value of the output_flag flag.
+type OutputLocVal struct {
+	// loc is the location of the output file.
+	loc string
 
-var (
-	// output_loc_flag is a flag that specifies the location of the output file.
-	output_loc_flag *string
+	// def_loc is the default location of the output file.
+	def_loc string
 
-	// is_output_loc_required_flag is a flag that specifies whether the output location is required or not.
-	is_output_loc_required_flag bool
+	// is_required is whether the flag is required or not.
+	is_required bool
+}
 
-	// struct_fields_flag is a pointer to the fields_flag flag.
-	struct_fields_flag *struct_fields_val
+// String implements the flag.Value interface.
+func (v *OutputLocVal) String() string {
+	return v.loc
+}
 
-	// generics_sig_flag is a pointer to the generics_flag flag.
-	generics_sig_flag *generics_sign_val
+// Set implements the flag.Value interface.
+func (v *OutputLocVal) Set(loc string) error {
+	v.loc = loc
+	return nil
+}
 
-	// type_list_flag is a pointer to the type_list_flag flag.
-	type_list_flag *type_list_val
-)
-
-// set_output_flag sets the flag that specifies the location of the output file.
+// NewOutputFlag sets the flag that specifies the location of the output file.
 //
 // Parameters:
 //   - def_value: The default value of the output_flag flag.
 //   - required: Whether the flag is required or not.
 //
+// Returns:
+//   - *OutputLocVal: The new output_flag flag. Never returns nil.
+//
 // Here are all the possible valid calls to this function:
 //
-//	set_output_flag("", false) <-> set_output_flag("[no location]", false)
-//	set_output_flag("path/to/file.go", false)
-//	set_output_flag("", true) <-> set_output_flag("path/to/file.go", true)
+//	NewOutputFlag("", false) <-> NewOutputFlag("[no location]", false)
+//	NewOutputFlag("path/to/file.go", false)
+//	NewOutputFlag("", true) <-> NewOutputFlag("path/to/file.go", true)
 //
 // However, the def_value parameter does not specify the actual default location of the output file.
 // Instead, it is merely used in the "usage" portion of the flag specification in order to give the user
@@ -51,7 +64,7 @@ var (
 //
 // This optional flag is used to specify the output file. If not specified, the output will be written to
 // standard output, that is, the file "<type_name>_treenode.go" in the root of the current directory.
-func set_output_flag(def_value string, required bool) {
+func NewOutputFlag(def_value string, required bool) *OutputLocVal {
 	var usage string
 
 	if required {
@@ -82,29 +95,81 @@ func set_output_flag(def_value string, required bool) {
 		usage = builder.String()
 	}
 
-	output_loc_flag = flag.String("o", "", usage)
-	is_output_loc_required_flag = required
+	value := &OutputLocVal{
+		def_loc:     def_value,
+		is_required: required,
+	}
+
+	flag.Var(value, "o", usage)
+
+	return value
 }
 
-// get_output_loc gets the location of the output file.
+// fix_output_loc fixes the output location.
+//
+// Parameters:
+//   - file_name: The name of the file.
+//   - suffix: The suffix of the file.
+//
+// Returns:
+//   - string: The output location.
+//   - error: An error if any.
+//
+// Errors:
+//   - *common.ErrInvalidParameter: If the file name is empty.
+//   - *common.ErrInvalidUsage: If the OutputLoc flag was not set.
+//   - error: Any other error that may have occurred.
+//
+// The suffix parameter must end with the ".go" extension. Plus, the output
+// location is always lowercased.
+//
+// NOTES: This function only sets the output location if the user did not set
+// the output flag. If they did, this function won't do anything but the necessary
+// checks and validations.
+//
+// Example:
+//
+//	loc, err := fix_output_loc("test", ".go")
+//	if err != nil {
+//	  panic(err)
+//	}
+//
+//	fmt.Println(loc) // test.go
+func (o *OutputLocVal) fix(default_file_name string) (string, error) {
+	if o.loc == "" {
+		if o.is_required {
+			return "", errors.New("flag must be set")
+		}
+
+		o.loc = default_file_name
+	}
+
+	// Assumption: default_file_name is never empty.
+
+	before, after := filepath.Split(o.loc)
+
+	after = strings.ToLower(after)
+
+	ext := filepath.Ext(after)
+	if ext == "" {
+		return "", errors.New("location cannot be a directory")
+	} else if ext != go_ext {
+		return "", errors.New("location must be a .go file")
+	}
+
+	return before + after, nil
+}
+
+// Loc gets the location of the output file.
 //
 // Returns:
 //   - string: The location of the output file.
-//   - error: An error of type *common.ErrInvalidUsage if the output location was not defined
-//     prior to calling this function.
-func get_output_loc() (string, error) {
-	if output_loc_flag == nil {
-		return "", NewErrInvalidUsage(
-			errors.New("output location was not defined"),
-			"Please call the go_generator.SetOutputFlag() function before calling this function.",
-		)
-	}
-
-	return *output_loc_flag, nil
+func (o *OutputLocVal) Loc() string {
+	return o.loc
 }
 
 // struct_fields_vaò is a struct that represents the fields value.
-type struct_fields_val struct {
+type StructFieldsVal struct {
 	// fields is a map of the fields and their types.
 	fields *ordered_map[string, string]
 
@@ -123,7 +188,7 @@ type struct_fields_val struct {
 // Format:
 //
 //	"<value1> <type1>, <value2> <type2>, ..."
-func (s struct_fields_val) String() string {
+func (s StructFieldsVal) String() string {
 	if s.fields.size() == 0 {
 		return ""
 	}
@@ -157,7 +222,7 @@ func (s struct_fields_val) String() string {
 }
 
 // Set implements the flag.Value interface.
-func (s *struct_fields_val) Set(value string) error {
+func (s *StructFieldsVal) Set(value string) error {
 	if value == "" && s.is_required {
 		return errors.New("value must be set")
 	}
@@ -175,12 +240,10 @@ func (s *struct_fields_val) Set(value string) error {
 
 		if len(sub_fields) == 1 {
 			reason := errors.New("missing type")
-			err := NewErrAt(i+1, "field", reason)
-			return err
+			return gcint.NewErrAt(i+1, "field", reason)
 		} else if len(sub_fields) > 2 {
 			reason := errors.New("too many fields")
-			err := NewErrAt(i+1, "field", reason)
-			return err
+			return gcint.NewErrAt(i+1, "field", reason)
 		}
 
 		ok := s.fields.add(sub_fields[0], sub_fields[1], false)
@@ -216,13 +279,18 @@ func (s *struct_fields_val) Set(value string) error {
 	return nil
 }
 
-// set_struct_fields_flag sets the flag that specifies the fields of the struct to generate the code for.
+// NewStructFieldsFlag sets the flag that specifies the fields of the struct to generate the code for.
 //
 // Parameters:
 //   - flag_name: The name of the flag.
 //   - is_required: Whether the flag is required or not.
 //   - count: The number of fields expected. -1 for unlimited number of fields.
 //   - brief: A brief description of the flag.
+//
+// Returns:
+//   - *StructFieldsVal: The value of the flag.
+//
+// This function returns nil iff count is 0.
 //
 // Any negative number will be interpreted as unlimited number of fields. Also, the value 0 will not set the flag.
 //
@@ -256,16 +324,16 @@ func (s *struct_fields_val) Set(value string) error {
 //
 // Also, it is possible to specify generics by following the value with the generics between square brackets;
 // like so: "a/MyType[T,C]"
-func set_struct_fields_flag(flag_name string, is_required bool, count int, brief string) {
+func NewStructFieldsFlag(flag_name string, is_required bool, count int, brief string) *StructFieldsVal {
 	if count == 0 {
-		return
+		return nil
 	}
 
 	if count < 0 {
 		count = -1
 	}
 
-	struct_fields_flag = &struct_fields_val{
+	value := &StructFieldsVal{
 		fields:      new_ordered_map[string, string](),
 		generics:    new_ordered_map[rune, string](),
 		is_required: is_required,
@@ -292,19 +360,164 @@ func set_struct_fields_flag(flag_name string, is_required bool, count int, brief
 
 	usage.WriteString("The syntax of the this flag is described in the documentation.")
 
-	flag.Var(struct_fields_flag, flag_name, usage.String())
+	flag.Var(value, flag_name, usage.String())
+
+	return value
 }
 
 // Fields returns the fields of the struct.
 //
 // Returns:
 //   - map[string]string: A map of field names and their types. Never returns nil.
-func (s struct_fields_val) Fields() map[string]string {
+func (s StructFieldsVal) Fields() map[string]string {
 	return s.fields.Map()
 }
 
-// generics_sign_val is a struct that contains the values of the generics.
-type generics_sign_val struct {
+// Generics returns the letters of the generics.
+//
+// Returns:
+//   - []rune: The letters of the generics.
+func (s *StructFieldsVal) Generics() []rune {
+	return s.generics.Keys()
+}
+
+// MakeParameterList makes a string representing a list of parameters.
+//
+// WARNING: Call this function only if StructFieldsFlag is set.
+//
+// Parameters:
+//   - fields: A map of field names and their types.
+//
+// Returns:
+//   - string: A string representing the parameters.
+//   - error: An error if any.
+func (s *StructFieldsVal) MakeParameterList() (string, error) {
+	var field_list []string
+	var type_list []string
+
+	iter := s.fields.iterator()
+	// dbg.Assert(iter != nil, "iterator must not be nil")
+
+	for {
+		entry, err := iter.Consume()
+		if err != nil {
+			break
+		}
+
+		if entry.Key == "" {
+			return "", errors.New("found type name with empty name")
+		}
+
+		first_letter, _ := utf8.DecodeRuneInString(entry.Key)
+		if first_letter == utf8.RuneError {
+			return "", errors.New("invalid UTF-8 encoding")
+		}
+
+		ok := unicode.IsLetter(first_letter)
+		if !ok {
+			return "", fmt.Errorf("type name %q must start with a letter", entry.Key)
+		}
+
+		ok = unicode.IsUpper(first_letter)
+		if !ok {
+			continue
+		}
+
+		pos, _ := slices.BinarySearch(field_list, entry.Key)
+		// dbg.AssertF(!ok, "%q must be unique", entry.Key)
+
+		field_list = slices.Insert(field_list, pos, entry.Key)
+		type_list = slices.Insert(type_list, pos, entry.Value)
+	}
+
+	var values []string
+	var builder strings.Builder
+
+	for i := 0; i < len(field_list); i++ {
+		param := strings.ToLower(field_list[i])
+
+		builder.WriteString(param)
+		builder.WriteRune(' ')
+		builder.WriteString(type_list[i])
+
+		str := builder.String()
+		values = append(values, str)
+
+		builder.Reset()
+	}
+
+	joined_str := strings.Join(values, ", ")
+
+	return joined_str, nil
+}
+
+// MakeAssignmentList makes a string representing a list of assignments.
+//
+// WARNING: Call this function only if StructFieldsFlag is set.
+//
+// Parameters:
+//   - fields: A map of field names and their types.
+//
+// Returns:
+//   - string: A string representing the assignments.
+//   - error: An error if any.
+func (s *StructFieldsVal) MakeAssignmentList() (map[string]string, error) {
+	var field_list []string
+	var type_list []string
+
+	iter := s.fields.iterator()
+	// dbg.Assert(iter != nil, "iterator must not be nil")
+
+	for {
+		entry, err := iter.Consume()
+		if err != nil {
+			break
+		}
+
+		if entry.Key == "" {
+			return nil, errors.New("found type name with empty name")
+		}
+
+		first_letter, _ := utf8.DecodeRuneInString(entry.Key)
+		if first_letter == utf8.RuneError {
+			return nil, errors.New("invalid UTF-8 encoding")
+		}
+
+		ok := unicode.IsLetter(first_letter)
+		if !ok {
+			return nil, fmt.Errorf("type name %q must start with a letter", entry.Key)
+		}
+
+		ok = unicode.IsUpper(first_letter)
+		if !ok {
+			continue
+		}
+
+		pos, _ := slices.BinarySearch(field_list, entry.Key)
+		// dbg.AssertF(!ok, "%q must be unique", entry.Key)
+
+		field_list = slices.Insert(field_list, pos, entry.Key)
+		type_list = slices.Insert(type_list, pos, entry.Value)
+	}
+
+	assignment_map := make(map[string]string)
+
+	for i := 0; i < len(field_list); i++ {
+		param := strings.ToLower(field_list[i])
+
+		_, ok := slices.BinarySearch(go_reserved_keywords, param)
+		if ok {
+			param = "elem_" + param
+		}
+
+		assignment_map[field_list[i]] = param
+	}
+
+	return assignment_map, nil
+}
+
+// GenericsSignVal is a struct that contains the values of the generics.
+type GenericsSignVal struct {
 	// letters is a slice that contains the letters of the generics.
 	letters []rune
 
@@ -323,7 +536,7 @@ type generics_sign_val struct {
 // Format:
 //
 //	[letter1 type1, letter2 type2, ...]
-func (s generics_sign_val) String() string {
+func (s GenericsSignVal) String() string {
 	if len(s.letters) == 0 {
 		return ""
 	}
@@ -353,7 +566,7 @@ func (s generics_sign_val) String() string {
 }
 
 // Set implements the flag.Value interface.
-func (s *generics_sign_val) Set(value string) error {
+func (s *GenericsSignVal) Set(value string) error {
 	if value == "" {
 		return nil
 	}
@@ -367,12 +580,12 @@ func (s *generics_sign_val) Set(value string) error {
 
 		letter, g_type, err := parse_generics_value(field)
 		if err != nil {
-			return NewErrAt(i+1, "field", err)
+			return gcint.NewErrAt(i+1, "field", err)
 		}
 
 		err = s.add(letter, g_type)
 		if err != nil {
-			return NewErrAt(i+1, "field", err)
+			return gcint.NewErrAt(i+1, "field", err)
 		}
 	}
 
@@ -383,12 +596,17 @@ func (s *generics_sign_val) Set(value string) error {
 	return nil
 }
 
-// set_generics_sign_flag sets the flag that specifies the generics to generate the code for.
+// NewGenericsSignFlag sets the flag that specifies the generics to generate the code for.
 //
 // Parameters:
 //   - flag_name: The name of the flag.
 //   - is_required: Whether the flag is required or not.
 //   - count: The number of generics. If -1, no upper bound is set, 0 means no generics.
+//
+// Returns:
+//   - *GenericsSignVal: The value of the flag.
+//
+// This function returns nil iff count is 0.
 //
 // Documentation:
 //
@@ -416,16 +634,16 @@ func (s *generics_sign_val) Set(value string) error {
 //		a T
 //		b C
 //	}
-func set_generics_sign_flag(flag_name string, is_required bool, count int) {
+func NewGenericsSignFlag(flag_name string, is_required bool, count int) *GenericsSignVal {
 	if count == 0 {
-		return
+		return nil
 	}
 
 	if count < 0 {
 		count = -1
 	}
 
-	generics_sig_flag = &generics_sign_val{
+	value := &GenericsSignVal{
 		letters:     make([]rune, 0),
 		types:       make([]string, 0),
 		is_required: is_required,
@@ -444,47 +662,9 @@ func set_generics_sign_flag(flag_name string, is_required bool, count int) {
 
 	usage.WriteString("The syntax of the this flag is described in the documentation.")
 
-	flag.Var(generics_sig_flag, flag_name, usage.String())
-}
+	flag.Var(value, flag_name, usage.String())
 
-// parse_generics_value is a helper function that is used to parse the generics
-// values.
-//
-// Parameters:
-//   - field: The field to parse.
-//
-// Returns:
-//   - rune: The letter of the generic.
-//   - string: The type of the generic.
-//   - error: An error if the parsing fails.
-//
-// Errors:
-//   - *ErrInvalidID: If the id is invalid.
-//   - error: If the parsing fails.
-//
-// Assertions:
-//   - field != ""
-func parse_generics_value(field string) (rune, string, error) {
-	// dbg.Assert(field != "", "field must not be an empty string")
-
-	sub_fields := strings.Split(field, "/")
-
-	if len(sub_fields) == 1 {
-		return '\000', "", errors.New("missing type of generic")
-	} else if len(sub_fields) > 2 {
-		return '\000', "", errors.New("too many fields")
-	}
-
-	left := sub_fields[0]
-
-	letter, err := is_generics_id(left)
-	if err != nil {
-		return '\000', "", NewErrInvalidID(left, err)
-	}
-
-	right := sub_fields[1]
-
-	return letter, right, nil
+	return value
 }
 
 // add is a helper function that is used to add a generic to the GenericsValue.
@@ -499,7 +679,7 @@ func parse_generics_value(field string) (rune, string, error) {
 // Assertions:
 //   - letter is an upper case letter.
 //   - g_type != ""
-func (gv *generics_sign_val) add(letter rune, g_type string) error {
+func (gv *GenericsSignVal) add(letter rune, g_type string) error {
 	// dbg.AssertParam("letter", unicode.IsUpper(letter), errors.New("letter must be an upper case letter"))
 	// dbg.AssertParam("g_type", g_type != "", errors.New("type must be set"))
 
@@ -527,7 +707,7 @@ func (gv *generics_sign_val) add(letter rune, g_type string) error {
 //
 // Returns:
 //   - string: The list of generics.
-func (gv generics_sign_val) Signature() string {
+func (gv GenericsSignVal) Signature() string {
 	if len(gv.letters) == 0 {
 		return ""
 	}
@@ -552,8 +732,8 @@ func (gv generics_sign_val) Signature() string {
 	return str
 }
 
-// type_list_val is a struct that represents a list of types.
-type type_list_val struct {
+// TypeListVal is a struct that represents a list of types.
+type TypeListVal struct {
 	// fields is a list of types.
 	types []string
 
@@ -572,7 +752,7 @@ type type_list_val struct {
 // Format:
 //
 //	"<type1>, <type2>, ..."
-func (s type_list_val) String() string {
+func (s TypeListVal) String() string {
 	if len(s.types) == 0 {
 		return ""
 	}
@@ -584,7 +764,7 @@ func (s type_list_val) String() string {
 }
 
 // Set implements the flag.Value interface.
-func (s *type_list_val) Set(value string) error {
+func (s *TypeListVal) Set(value string) error {
 	if value == "" && s.is_required {
 		return errors.New("value must be set")
 	}
@@ -635,7 +815,7 @@ func (s *type_list_val) Set(value string) error {
 	return nil
 }
 
-// set_type_list_flag sets the flag that specifies the fields of the struct to generate the code for.
+// NewTypeListFlag sets the flag that specifies the fields of the struct to generate the code for.
 //
 // Parameters:
 //   - flag_name: The name of the flag.
@@ -643,7 +823,13 @@ func (s *type_list_val) Set(value string) error {
 //   - count: The number of fields expected. -1 for unlimited number of fields.
 //   - brief: A brief description of the flag.
 //
+// Returns:
+//   - *TypeListVal: The flag value.
+//
+// This function returns nil iff count is 0.
+//
 // Any negative number will be interpreted as unlimited number of fields. Also, the value 0 will not set the flag.
+// If value is nil, it will panic.
 //
 // Documentation:
 //
@@ -671,20 +857,20 @@ func (s *type_list_val) Set(value string) error {
 //
 // Also, it is possible to specify generics by following the value with the generics between square brackets;
 // like so: "a/MyType[T,C]"
-func set_type_list_flag(flag_name string, is_required bool, count int, brief string) {
+func NewTypeListFlag(flag_name string, is_required bool, count int, brief string) *TypeListVal {
 	if count == 0 {
-		return
+		return nil
 	}
 
 	if count < 0 {
 		count = -1
 	}
 
-	type_list_flag = &type_list_val{
+	value := &TypeListVal{
 		types:       make([]string, 0),
+		generics:    new_ordered_map[rune, string](),
 		is_required: is_required,
 		count:       count,
-		generics:    new_ordered_map[rune, string](),
 	}
 
 	var usage strings.Builder
@@ -707,7 +893,9 @@ func set_type_list_flag(flag_name string, is_required bool, count int, brief str
 
 	usage.WriteString("The syntax of the this flag is described in the documentation.")
 
-	flag.Var(type_list_flag, flag_name, usage.String())
+	flag.Var(value, flag_name, usage.String())
+
+	return value
 }
 
 // Type returns the type at the given index.
@@ -718,17 +906,20 @@ func set_type_list_flag(flag_name string, is_required bool, count int, brief str
 // Return:
 //   - string: The type at the given index.
 //   - error: An error of type *luc.ErrInvalidParameter if the index is out of bounds.
-func (s type_list_val) Type(idx int) (string, error) {
+func (s TypeListVal) Type(idx int) (string, error) {
 	if idx < 0 || idx >= len(s.types) {
-		return "", NewErrInvalidParameter("idx", NewErrOutOfBounds(idx, 0, len(s.types)))
+		return "", gcers.NewErrInvalidParameter("idx", gcint.NewErrOutOfBounds(idx, 0, len(s.types)))
 	}
 
 	return s.types[idx], nil
 }
 
-// print_flags prints the default values of the flags.
+// Generics returns the generics of the struct.
 //
-// It is useful for debugging and for error messages.
-func print_flags() {
-	flag.PrintDefaults()
+// Returns:
+//   - []rune: The generics of the struct.
+func (s TypeListVal) Generics() []rune {
+	return s.generics.Keys()
 }
+
+/////////////////////////////////////////////////////
