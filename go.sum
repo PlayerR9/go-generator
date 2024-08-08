@@ -1,6 +1,4 @@
-github.com/PlayerR9/go-commons v0.1.1 h1:j1P6WyUXz3uFvYrDg1Jep3psnRfuwc12pmRKXjpXMKM=
-github.com/PlayerR9/go-commons v0.1.1/go.mod h1:3DEOPnnd4cBE4eZizrLvH0nQ8mx4tgR7RDByKfqQDQo=
-github.com/PlayerR9/go-commons v0.1.2 h1:yR7wvs2/NQNfJDNOysD+pPmlwkQIpo1344L0kl0F+hM=
-github.com/PlayerR9/go-commons v0.1.2/go.mod h1://CqBLk0vMDyChtNaAKXYqcUu6qsL89dg22v5DGLRtM=
+github.com/PlayerR9/go-commons v0.1.3 h1:w0QX7jds/KRaM66K15zM/4pdKAPOwIIYcOWjILEH65E=
+github.com/PlayerR9/go-commons v0.1.3/go.mod h1:dBHpdyRCXWcvWTUse0lDljf1Ymn1U8CeMOm7Lcyvd58=
 golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 h1:2dVuKD2vS7b0QIHQbpyTISPd0LeHDbnYEryqj5Q1ug8=
 golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56/go.mod h1:M4RDyNAINzryxdtnbRXRL/OHtkFuWGRjvuhBJpk2IlY=
