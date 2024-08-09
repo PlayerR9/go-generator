@@ -23,6 +23,7 @@ type Generated struct {
 //
 // Parameters:
 //   - suffix: The suffix to add to the file name. If empty, no suffix is added.
+//   - sub_directories: The sub directories to create the file in.
 //
 // Returns:
 //   - string: The location of the generated code.
@@ -30,7 +31,11 @@ type Generated struct {
 //
 // The suffix is useful for when generating multiple files as it adds a suffix without
 // changing the extension.
-func (g Generated) WriteFile(suffix string) (string, error) {
+func (g Generated) WriteFile(suffix string, sub_directories ...string) (string, error) {
+	dir, file := filepath.Split(g.DestLoc)
+
+	g.DestLoc = filepath.Join(dir, filepath.Join(sub_directories...), file)
+
 	var loc string
 
 	if suffix != "" {
@@ -39,7 +44,7 @@ func (g Generated) WriteFile(suffix string) (string, error) {
 		loc = g.DestLoc
 	}
 
-	dir := filepath.Dir(loc)
+	dir = filepath.Dir(loc)
 
 	err := os.MkdirAll(dir, 0755)
 	if err != nil {
