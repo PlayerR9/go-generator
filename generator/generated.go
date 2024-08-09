@@ -31,7 +31,6 @@ func (g *Generated) ModifySuffixPath(suffix string, sub_directories ...string) {
 
 	if len(sub_directories) > 0 {
 		dir, file := filepath.Split(g.DestLoc)
-
 		loc = filepath.Join(dir, filepath.Join(sub_directories...), file)
 	} else {
 		loc = g.DestLoc
@@ -55,16 +54,12 @@ func (g *Generated) ModifySuffixPath(suffix string, sub_directories ...string) {
 func (g *Generated) ModifyPrefixPath(prefix string, sub_directories ...string) {
 	var loc string
 
-	if len(sub_directories) > 0 {
-		dir, file := filepath.Split(g.DestLoc)
+	dir, file := filepath.Split(g.DestLoc)
 
+	if len(sub_directories) > 0 {
 		loc = filepath.Join(dir, filepath.Join(sub_directories...), prefix+file)
 	} else {
-		loc = g.DestLoc
-	}
-
-	if prefix != "" {
-		loc = prefix + loc
+		loc = filepath.Join(dir, prefix+file)
 	}
 
 	g.DestLoc = loc
