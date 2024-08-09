@@ -37,6 +37,8 @@ func (g Generated) WriteFile(suffix string, sub_directories ...string) (string, 
 		dir, file := filepath.Split(g.DestLoc)
 
 		loc = filepath.Join(dir, filepath.Join(sub_directories...), file)
+	} else {
+		loc = g.DestLoc
 	}
 
 	if suffix != "" {
