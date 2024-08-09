@@ -3,8 +3,7 @@ package generator
 import (
 	"os"
 	"path/filepath"
-
-	gcfm "github.com/PlayerR9/go-commons/file_manager"
+	"strings"
 )
 
 // go_ext is the extension of Go files.
@@ -32,19 +31,19 @@ type Generated struct {
 // The suffix is useful for when generating multiple files as it adds a suffix without
 // changing the extension.
 func (g Generated) WriteFile(suffix string, sub_directories ...string) (string, error) {
-	dir, file := filepath.Split(g.DestLoc)
-
-	g.DestLoc = filepath.Join(dir, filepath.Join(sub_directories...), file)
-
 	var loc string
 
-	if suffix != "" {
-		loc = gcfm.AddSuffixToFileName(g.DestLoc, suffix, go_ext)
-	} else {
-		loc = g.DestLoc
+	if len(sub_directories) > 0 {
+		dir, file := filepath.Split(g.DestLoc)
+
+		loc = filepath.Join(dir, filepath.Join(sub_directories...), file)
 	}
 
-	dir = filepath.Dir(loc)
+	if suffix != "" {
+		loc = strings.TrimSuffix(loc, go_ext) + suffix + go_ext
+	}
+
+	dir := filepath.Dir(loc)
 
 	err := os.MkdirAll(dir, 0755)
 	if err != nil {
