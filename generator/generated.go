@@ -18,19 +18,15 @@ type Generated struct {
 	Data []byte
 }
 
-// WriteFile writes the generated code to the destination file.
+// ModifySuffixPath modifies the path of the generated code.
 //
 // Parameters:
 //   - suffix: The suffix to add to the file name. If empty, no suffix is added.
 //   - sub_directories: The sub directories to create the file in.
 //
-// Returns:
-//   - string: The location of the generated code.
-//   - error: An error if occurred.
-//
 // The suffix is useful for when generating multiple files as it adds a suffix without
 // changing the extension.
-func (g Generated) WriteFile(suffix string, sub_directories ...string) (string, error) {
+func (g *Generated) ModifySuffixPath(suffix string, sub_directories ...string) {
 	var loc string
 
 	if len(sub_directories) > 0 {
@@ -45,17 +41,58 @@ func (g Generated) WriteFile(suffix string, sub_directories ...string) (string, 
 		loc = strings.TrimSuffix(loc, go_ext) + suffix + go_ext
 	}
 
-	dir := filepath.Dir(loc)
+	g.DestLoc = loc
+}
+
+// ModifyPrefixPath modifies the path of the generated code.
+//
+// Parameters:
+//   - prefix: The prefix to add to the file name. If empty, no prefix is added.
+//   - sub_directories: The sub directories to create the file in.
+//
+// The prefix is useful for when generating multiple files as it adds a prefix without
+// changing the extension.
+func (g *Generated) ModifyPrefixPath(prefix string, sub_directories ...string) {
+	var loc string
+
+	if len(sub_directories) > 0 {
+		dir, file := filepath.Split(g.DestLoc)
+
+		loc = filepath.Join(dir, filepath.Join(sub_directories...), prefix+file)
+	} else {
+		loc = g.DestLoc
+	}
+
+	if prefix != "" {
+		loc = prefix + loc
+	}
+
+	g.DestLoc = loc
+}
+
+// WriteFile writes the generated code to the destination file.
+//
+// Parameters:
+//   - suffix: The suffix to add to the file name. If empty, no suffix is added.
+//   - sub_directories: The sub directories to create the file in.
+//
+// Returns:
+//   - error: An error if occurred.
+//
+// The suffix is useful for when generating multiple files as it adds a suffix without
+// changing the extension.
+func (g Generated) WriteFile() error {
+	dir := filepath.Dir(g.DestLoc)
 
 	err := os.MkdirAll(dir, 0755)
 	if err != nil {
-		return loc, err
+		return err
 	}
 
-	err = os.WriteFile(loc, g.Data, 0644)
+	err = os.WriteFile(g.DestLoc, g.Data, 0644)
 	if err != nil {
-		return loc, err
+		return err
 	}
 
-	return loc, nil
+	return nil
 }
