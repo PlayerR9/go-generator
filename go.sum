@@ -1,0 +1,6 @@
+github.com/PlayerR9/errors v0.1.1 h1:Djq/buQGVmIoSOaMtyZQjzHnm1U21CHAlMN2MNh01eU=
+github.com/PlayerR9/errors v0.1.1/go.mod h1:vM52FOVFTyAAbyUWeP9CJVNHWRy8YAHyYic58wy6U2Y=
+github.com/PlayerR9/go-sets v0.1.0 h1:wdvHYCoAnVpLcdnr1u7Ehzk4cXqoeL4u8MnwCxEs1J8=
+github.com/PlayerR9/go-sets v0.1.0/go.mod h1:xmc/P+AhdGdjt6TdQO/J/fWmmetK8Y/egLrX5cfAZLY=
+github.com/dustin/go-humanize v1.0.1 h1:GzkhY7T5VNhEkwH0PVJgjz+fX1rhBrR7pRT3mDkpeCY=
+github.com/dustin/go-humanize v1.0.1/go.mod h1:Mu1zIs6XwVuF/gI1OepvI0qD18qycQx+mFykh5fBlto=

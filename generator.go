@@ -24,11 +24,11 @@ type PackageNameSetter interface {
 // DoFunc is the type of the function to perform on the data before generating the code.
 //
 // Parameters:
-//   - T: The data to perform the function on.
+//   - data: The data to perform the function on.
 //
 // Returns:
 //   - error: An error if occurred.
-type DoFunc[T PackageNameSetter] func(T) error
+type DoFunc[T PackageNameSetter] func(data T) error
 
 // CodeGenerator is the code generator.
 type CodeGenerator[T PackageNameSetter] struct {
