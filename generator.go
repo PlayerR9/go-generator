@@ -10,6 +10,8 @@ import (
 	"text/template"
 
 	gcers "github.com/PlayerR9/go-errors"
+	gers "github.com/PlayerR9/go-errors"
+	gerr "github.com/PlayerR9/go-errors/error"
 )
 
 // PackageNameSetter is the interface that all generators must implement.
@@ -195,14 +197,11 @@ func fix_loc(loc string) (string, error) {
 //   - error: Any other type of error that may have occurred.
 func (cg CodeGenerator[T]) GenerateWithLoc(loc string, data T) (*Generated, error) {
 	if loc == "" {
-		return nil, gcers.NewErrInvalidParameter("loc must not be an empty string")
+		err := gerr.New(gers.BadParameter, "loc must not be an empty string")
+		return nil, err
 	}
 
-	if cg.templ == nil {
-		panic("cg.templ is nil")
-	}
-
-	// dbg.AssertNil(cg.templ, "cg.templ")
+	gers.AssertNotNil(cg.templ, "cg.templ")
 
 	// NOTES: By extracting FixOutputLoc and FixImportDir to a separate function,
 	// we can remove the dependency on the Generater interface. Suggested to do so
@@ -269,12 +268,12 @@ func (cg CodeGenerator[T]) Generate(o *OutputLocVal, default_file_name string, d
 		)
 	}
 
-	if cg.templ == nil {
-		panic("cg.templ is nil")
-	}
+	gers.AssertNotNil(cg.templ, "cg.templ")
 
 	if default_file_name == "" {
-		return nil, gcers.NewErrInvalidParameter("file_name must not be an empty string")
+		err := gerr.New(gers.BadParameter, "file_name must not be an empty string")
+
+		return nil, err
 	}
 
 	// dbg.AssertNil(cg.templ, "cg.templ")

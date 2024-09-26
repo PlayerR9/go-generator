@@ -7,4 +7,4 @@ require (
 	github.com/dustin/go-humanize v1.0.1
 )
 
-require github.com/PlayerR9/go-errors v0.1.2
+require github.com/PlayerR9/go-errors v0.1.3

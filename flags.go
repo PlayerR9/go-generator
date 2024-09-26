@@ -11,7 +11,8 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	gcers "github.com/PlayerR9/go-errors"
+	gers "github.com/PlayerR9/go-errors"
+	gerr "github.com/PlayerR9/go-errors/error"
 	"github.com/PlayerR9/go-sets"
 	"github.com/dustin/go-humanize"
 )
@@ -240,9 +241,9 @@ func (s *StructFieldsVal) Set(value string) error {
 		sub_fields := strings.Split(field, "/")
 
 		if len(sub_fields) == 1 {
-			return gcers.NewErrAt(humanize.Ordinal(i+1)+" field", errors.New("missing type"))
+			return gers.NewErrAt(humanize.Ordinal(i+1)+" field", errors.New("missing type"))
 		} else if len(sub_fields) > 2 {
-			return gcers.NewErrAt(humanize.Ordinal(i+1)+" field", errors.New("too many fields"))
+			return gers.NewErrAt(humanize.Ordinal(i+1)+" field", errors.New("too many fields"))
 		}
 
 		s.fields.Add(sub_fields[0], sub_fields[1])
@@ -576,12 +577,12 @@ func (s *GenericsSignVal) Set(value string) error {
 
 		letter, g_type, err := parse_generics_value(field)
 		if err != nil {
-			return gcers.NewErrAt(humanize.Ordinal(i+1)+" field", err)
+			return gers.NewErrAt(humanize.Ordinal(i+1)+" field", err)
 		}
 
 		err = s.add(letter, g_type)
 		if err != nil {
-			return gcers.NewErrAt(humanize.Ordinal(i+1)+" field", err)
+			return gers.NewErrAt(humanize.Ordinal(i+1)+" field", err)
 		}
 	}
 
@@ -762,7 +763,7 @@ func (s TypeListVal) String() string {
 // Set implements the flag.Value interface.
 func (s *TypeListVal) Set(value string) error {
 	if s == nil {
-		return gcers.NewErrNilParameter("TypeListVal")
+		return gers.NewErrNilParameter("TypeListVal")
 	}
 
 	if value == "" && s.is_required {
@@ -911,8 +912,7 @@ func NewTypeListFlag(flag_name string, is_required bool, count int, brief string
 //   - error: An error of type *luc.ErrInvalidParameter if the index is out of bounds.
 func (s TypeListVal) Type(idx int) (string, error) {
 	if idx < 0 || idx >= len(s.types) {
-		err := gcers.NewErrInvalidParameter(fmt.Sprintf("idx must be in the range [0, %d]", len(s.types)))
-		err.AddFrame("TypeListVal", "Type()")
+		err := gerr.New(gers.BadParameter, fmt.Sprintf("idx must be in the range [0, %d]", len(s.types)))
 
 		return "", err
 	}

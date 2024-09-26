@@ -9,6 +9,8 @@ import (
 	"unicode/utf8"
 
 	gcers "github.com/PlayerR9/go-errors"
+	gers "github.com/PlayerR9/go-errors"
+	gerr "github.com/PlayerR9/go-errors/error"
 	"github.com/dustin/go-humanize"
 )
 
@@ -98,7 +100,9 @@ func AlignGenerics(g *GenericsSignVal, values ...flag.Value) error {
 //   - error: An error if the type signature cannot be created. (i.e., the type name is empty)
 func MakeTypeSign(g *GenericsSignVal, type_name string, suffix string) (string, error) {
 	if type_name == "" {
-		return "", gcers.NewErrInvalidParameter("type_name must not be an empty string")
+		err := gerr.New(gers.BadParameter, "type_name must not be an empty string")
+
+		return "", err
 	}
 
 	var builder strings.Builder
