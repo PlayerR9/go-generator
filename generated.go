@@ -83,6 +83,27 @@ func (g *Generated) ModifyPrefixPath(prefix string, sub_directories ...string) b
 	return true
 }
 
+// ReplaceFileName replaces the file name of the generated code.
+//
+// Parameters:
+//   - file_name: The file name to use for the generated code.
+//
+// Returns:
+//   - bool: True if the receiver is not nil, false otherwise.
+//
+// The file name is useful for when generating multiple files as it adds a prefix without
+// changing the extension.
+func (g *Generated) ReplaceFileName(file_name string) bool {
+	if g == nil || file_name == "" {
+		return false
+	}
+
+	dir, _ := filepath.Split(g.DestLoc)
+	g.DestLoc = filepath.Join(dir, file_name)
+
+	return true
+}
+
 // WriteFile writes the generated code to the destination file.
 //
 // Parameters:
