@@ -9,9 +9,8 @@ import (
 	"strings"
 	"text/template"
 
-	gcers "github.com/PlayerR9/go-errors"
 	gers "github.com/PlayerR9/go-errors"
-	gerr "github.com/PlayerR9/go-errors/error"
+	"github.com/PlayerR9/go-errors/assert"
 )
 
 // PackageNameSetter is the interface that all generators must implement.
@@ -51,7 +50,9 @@ type CodeGenerator[T PackageNameSetter] struct {
 //   - error: An error of type *errors.ErrInvalidParameter if 'templ' is nil.
 func NewCodeGenerator[T PackageNameSetter](templ *template.Template) (*CodeGenerator[T], error) {
 	if templ == nil {
-		return nil, gcers.NewErrNilParameter("templ")
+		err := gers.NewErrInvalidParameter("CodeGenerator()", "templ must not be nil")
+
+		return nil, err
 	}
 
 	return &CodeGenerator[T]{
@@ -197,11 +198,12 @@ func fix_loc(loc string) (string, error) {
 //   - error: Any other type of error that may have occurred.
 func (cg CodeGenerator[T]) GenerateWithLoc(loc string, data T) (*Generated, error) {
 	if loc == "" {
-		err := gerr.New(gers.BadParameter, "loc must not be an empty string")
+		err := gers.NewErrInvalidParameter("CodeGenerator.GenerateWithLoc()", "loc must not be an empty string")
+
 		return nil, err
 	}
 
-	gers.AssertNotNil(cg.templ, "cg.templ")
+	assert.NotNil(cg.templ, "cg.templ")
 
 	// NOTES: By extracting FixOutputLoc and FixImportDir to a separate function,
 	// we can remove the dependency on the Generater interface. Suggested to do so
@@ -262,16 +264,17 @@ func (cg CodeGenerator[T]) GenerateWithLoc(loc string, data T) (*Generated, erro
 //   - error: Any other type of error that may have occurred.
 func (cg CodeGenerator[T]) Generate(o *OutputLocVal, default_file_name string, data T) (*Generated, error) {
 	if o == nil {
-		return nil, gcers.NewErrInvalidUsage(
+		return nil, gers.NewErrInvalidUsage(
+			"CodeGenerator.Generate()",
 			"output location was not defined",
 			"Please call the go-generator.NewOutputFlag() function before calling this function.",
 		)
 	}
 
-	gers.AssertNotNil(cg.templ, "cg.templ")
+	assert.NotNil(cg.templ, "cg.templ")
 
 	if default_file_name == "" {
-		err := gerr.New(gers.BadParameter, "file_name must not be an empty string")
+		err := gers.NewErrInvalidParameter("CodeGenerator.Generate()", "default_file_name must not be an empty string")
 
 		return nil, err
 	}

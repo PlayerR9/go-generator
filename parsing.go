@@ -3,15 +3,13 @@ package generator
 import (
 	"errors"
 	"flag"
+	"fmt"
 	"slices"
 	"strings"
 	"unicode"
 	"unicode/utf8"
 
-	gcers "github.com/PlayerR9/go-errors"
 	gers "github.com/PlayerR9/go-errors"
-	gerr "github.com/PlayerR9/go-errors/error"
-	"github.com/dustin/go-humanize"
 )
 
 // PrintFlags prints the default values of the flags.
@@ -47,7 +45,8 @@ func AlignGenerics(g *GenericsSignVal, values ...flag.Value) error {
 	values = values[:top]
 
 	if g != nil && len(values) == 0 {
-		return gcers.NewErrInvalidUsage(
+		return gers.NewErrInvalidUsage(
+			"generator.AlignGenerics()",
 			"not specified any values that have generics, yet *GenericsSignVal is specified",
 			"Make sure to call a flag that sets the *GenericsSignVal such as go-generator.NewTypeListFlag()",
 		)
@@ -68,7 +67,8 @@ func AlignGenerics(g *GenericsSignVal, values ...flag.Value) error {
 	}
 
 	if len(all_generics) > 0 && g == nil {
-		return gcers.NewErrInvalidUsage(
+		return gers.NewErrInvalidUsage(
+			"generator.AlignGenerics()",
 			"specified at least one value that has generics but not specified the *GenericsSignVal",
 			"Make sure to call a flag that sets the *GenericsSignVal such as go-generator.NewTypeListFlag()",
 		)
@@ -100,7 +100,7 @@ func AlignGenerics(g *GenericsSignVal, values ...flag.Value) error {
 //   - error: An error if the type signature cannot be created. (i.e., the type name is empty)
 func MakeTypeSign(g *GenericsSignVal, type_name string, suffix string) (string, error) {
 	if type_name == "" {
-		err := gerr.New(gers.BadParameter, "type_name must not be an empty string")
+		err := gers.NewErrInvalidParameter("generator.MakeTypeSign()", "type_name must not be an empty string")
 
 		return "", err
 	}
@@ -207,7 +207,7 @@ func parse_generics(str string) ([]rune, error) {
 
 			letter, err := is_generics_id(field)
 			if err != nil {
-				return nil, gcers.NewErrAt(humanize.Ordinal(i+1)+" field", err)
+				return nil, fmt.Errorf("%d field: %w", i+1, err)
 			}
 
 			letters = append(letters, letter)
