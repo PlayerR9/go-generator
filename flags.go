@@ -262,8 +262,8 @@ func (s *StructFieldsVal) Set(value string) error {
 		}
 
 		chars, err := parse_generics(field_type)
-		ok := IsErrNotGeneric(err)
 
+		ok := gers.Is(err, BadGeneric)
 		if ok {
 			continue
 		} else if err != nil {
@@ -802,8 +802,8 @@ func (s *TypeListVal) Set(value string) error {
 		}
 
 		chars, err := parse_generics(field_type)
-		ok := IsErrNotGeneric(err)
 
+		ok := gers.Is(err, BadGeneric)
 		if ok {
 			continue
 		} else if err != nil {

@@ -215,7 +215,9 @@ func parse_generics(str string) ([]rune, error) {
 	} else {
 		letter, err := is_generics_id(str)
 		if err != nil {
-			err := NewErrNotGeneric(err)
+			err := gers.NewFromError(BadGeneric, err)
+			err.AddFrame("generator.parse_generics()")
+
 			return nil, err
 		}
 
@@ -260,7 +262,10 @@ func parse_generics_value(field string) (rune, string, error) {
 
 	letter, err := is_generics_id(left)
 	if err != nil {
-		return '\000', "", NewErrInvalidID(left, err)
+		err := gers.NewFromError(BadID, err)
+		err.AddFrame("generator.parse_generics_value()")
+
+		return 0, "", err
 	}
 
 	right := sub_fields[1]
