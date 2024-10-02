@@ -9,11 +9,12 @@ func _() {
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
 	_ = x[BadID-0]
+	_ = x[BadGeneric-1]
 }
 
-const _ErrorCode_name = "BadID"
+const _ErrorCode_name = "BadIDBadGeneric"
 
-var _ErrorCode_index = [...]uint8{0, 5}
+var _ErrorCode_index = [...]uint8{0, 5, 15}
 
 func (i ErrorCode) String() string {
 	if i < 0 || i >= ErrorCode(len(_ErrorCode_index)-1) {
