@@ -40,6 +40,14 @@ type CodeGenerator[T PackageNameSetter] struct {
 	do_funcs []DoFunc[T]
 }
 
+// IsNil checks whether the code generator is nil or not.
+//
+// Returns:
+//   - bool: True if the code generator is nil, false otherwise.
+func (cg *CodeGenerator[T]) IsNil() bool {
+	return cg == nil
+}
+
 // NewCodeGenerator creates a new code generator.
 //
 // Parameters:
